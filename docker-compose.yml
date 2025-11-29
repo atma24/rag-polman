@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # 1. Service Backend (Python)
+  backend:
+    build: ./backend
+    container_name: python_back
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # PENTING: Agar bisa akses localhost komputer kamu
+    environment:
+      # Perhatikan: Kita ganti 'n8n' menjadi 'host.docker.internal'
+      # Ini artinya: "Cari port 5678 di komputer asli (host), bukan di dalam docker network ini"
+      - N8N_WEBHOOK_URL=http://host.docker.internal:5678/webhook/chat
+      - N8N_UPLOAD_URL=http://host.docker.internal:5678/webhook/upload
+    networks:
+      - rag-network
+    
+
+  # 2. Service Frontend (Next.js)
+  frontend:
+    build: ./frontend
+    container_name: nextjs_front
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      # Frontend diakses browser user, jadi tetap akses localhost biasa
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - rag-network
+
+# Network agar Frontend dan Backend bisa saling sapa
+networks:
+  rag-network:
+    driver: bridge
